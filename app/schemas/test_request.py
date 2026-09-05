@@ -24,7 +24,7 @@ class Executor(str, Enum):
   """
 
   CONSTANT_VUS = "CONSTANT_VUS"
-  RAMPING_VUS = "RAMPING_UVS"
+  RAMPING_VUS = "RAMPING_VUS"
   ARRIVAL_RATE = "ARRIVAL_RATE"
 
 class Stage(BaseModel):
@@ -71,7 +71,7 @@ class PerformanceTestRequest(BaseModel):
   think_time_seconds: float = Field(default=0.0, ge=0, le=60)
 
   #ARRIVAL_RATE 에서 도착률을 감당한 VU 풀 크기. 부족하면 K6가 경고
-  per_allocated_vus: int | None= Field(default=None, ge=1, le=2000)
+  pre_allocated_vus: int | None= Field(default=None, ge=1, le=2000)
 
   thresholds: Thresholds = Thresholds()
 
