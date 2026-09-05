@@ -47,7 +47,7 @@ export default function () {{
 
     const body = {body_script};
 
-    http.request(
+    const response = http.request(
         "{method}",
         url,
         body,
