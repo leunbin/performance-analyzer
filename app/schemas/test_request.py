@@ -55,6 +55,10 @@ class Thresholds(BaseModel):
       and self.max_failure_rate is None
     )
 
+class BodyRandomization(BaseModel):
+  path: list[str | int] = Field(min_length=1)
+  values: list[Any] = Field(min_length=1)
+
 class PerformanceTestRequest(BaseModel):
   tool: LoadTestTool
 
@@ -62,6 +66,7 @@ class PerformanceTestRequest(BaseModel):
   url: str
   headers: dict[str, str] = {}
   body: dict[str, Any] | None = None
+  body_randomization: BodyRandomization | None = None
 
   executor: Executor = Executor.CONSTANT_VUS
   stages: list[Stage] = Field(min_length=1, max_length=10)
@@ -87,6 +92,9 @@ class PerformanceTestRequest(BaseModel):
   def check(self) -> "PerformanceTestRequest":
         if not self.url.startswith(("http://", "https://")):
             raise ValueError("url must start with http:// or https://")
+
+        if self.body_randomization is not None and self.body is None:
+            raise ValueError("body_randomization requires a request body")
 
         if self.total_duration_seconds > 3600:
             raise ValueError("total duration must not exceed 3600 seconds")

@@ -22,6 +22,7 @@ h1{font-size:19px;font-weight:600;letter-spacing:-.015em;margin:0 0 2px}
 .sub{color:var(--soft);font-size:13.5px;margin:0 0 24px}
 .field{margin-bottom:20px}
 .field>label,.flabel{display:block;font-size:13px;font-weight:500;margin-bottom:7px}
+.field>label .opt{font-weight:400;color:var(--soft)}
 .hint{font-size:12.5px;color:var(--soft);margin-top:6px}
 .hint.bad{color:#A33A28}
 .inp{width:100%;font:inherit;font-size:14px;color:var(--ink);background:#F4F6F5;
@@ -42,6 +43,7 @@ h1{font-size:19px;font-weight:600;letter-spacing:-.015em;margin:0 0 2px}
   font-size:13px;padding:6px 12px;border-radius:3px;cursor:pointer;margin-top:2px}
 .addbtn:disabled{opacity:.4;cursor:not-allowed}
 textarea.inp{font-family:'IBM Plex Mono',monospace;font-size:13px;min-height:88px;resize:vertical}
+textarea.inp.short{min-height:66px}
 .stage{display:flex;gap:8px;align-items:center;margin-bottom:7px}
 .stage .n{flex:0 0 16px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--soft)}
 .stage input{flex:1 1 0;min-width:0}
@@ -83,11 +85,22 @@ textarea.inp{font-family:'IBM Plex Mono',monospace;font-size:13px;min-height:88p
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:28px}
 .stat .n{font-family:'IBM Plex Mono',monospace;font-size:25px;font-weight:500;letter-spacing:-.02em}
 .stat .l{font-size:12.5px;color:var(--gsoft);margin-top:3px}
+.warn{background:#2A2418;border-left:2px solid var(--signal);padding:12px 15px;font-size:13px;
+  margin-bottom:24px;line-height:1.55}
 .crow{display:flex;align-items:center;gap:11px;margin-bottom:6px}
 .crow .c{font-family:'IBM Plex Mono',monospace;font-size:13px;flex:0 0 34px}
 .crow .bar{height:9px;border-radius:1px;background:var(--trace);min-width:3px}
 .crow .bar.bad{background:var(--fault)}
 .crow .n{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--gsoft)}
+.steps{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  margin-bottom:28px}
+.steps th{text-align:right;font-weight:500;font-size:11px;color:var(--gsoft);
+  padding:0 0 7px 12px;border-bottom:1px solid #33434F;font-family:'IBM Plex Sans',sans-serif}
+.steps th:first-child{text-align:left;padding-left:0}
+.steps td{text-align:right;padding:8px 0 8px 12px;border-bottom:1px solid #22303C}
+.steps td:first-child{text-align:left;padding-left:0}
+.steps tr.knee td{color:var(--fault)}
+.steps tr.knee td:first-child::after{content:' \2190 knee';color:var(--signal);font-size:11px}
 .notebox{margin-top:26px;border-top:1px solid #33434F;padding-top:18px}
 .noteinp{width:100%;font:inherit;font-size:13.5px;color:var(--glow);background:#111A22;
   border:1px solid #33434F;border-radius:3px;padding:10px 12px}
@@ -100,12 +113,13 @@ pre{font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.65;back
 .history{grid-column:1/-1;border-top:1px solid var(--rule);padding:26px 30px 50px}
 .hhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
 .hhead h2{font-size:16px;font-weight:600;margin:0}
+.hwrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th{text-align:left;font-weight:500;font-size:12px;color:var(--soft);padding:0 10px 8px 0;
-  border-bottom:1px solid var(--rule)}
+  border-bottom:1px solid var(--rule);white-space:nowrap}
 td{padding:10px 10px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 tr.sel td{background:#D6DCD9}
-td.num{font-family:'IBM Plex Mono',monospace}
+td.num{font-family:'IBM Plex Mono',monospace;white-space:nowrap}
 .tag{font-size:11.5px;padding:2px 7px;border-radius:3px;font-weight:500}
 .tag.p{background:#CBE7E4;color:#0F4F46}
 .tag.f{background:#F2D4CE;color:#7A2919}
@@ -152,6 +166,16 @@ td.num{font-family:'IBM Plex Mono',monospace}
   </div>
 
   <div class="field">
+    <label for="rand">Vary one field <span class="opt">&mdash; optional</span></label>
+    <textarea class="inp short" id="rand"
+      placeholder='{"path": ["items", 0, "productOptionId"], "values": [2, 3, 4]}'></textarea>
+    <p class="hint" id="randNote">Picks a random value for one body field on every request. Sending
+      the same row every time concentrates lock contention on it, which makes writes look worse
+      than they are.</p>
+    <p class="hint bad" id="randErr" hidden></p>
+  </div>
+
+  <div class="field">
     <label>Test shape</label>
     <div class="chips" id="presets"></div>
     <p class="hint" id="presetWhy">Pick a shape, or set the stages yourself below.</p>
@@ -187,7 +211,7 @@ td.num{font-family:'IBM Plex Mono',monospace}
       <div><label for="p99">p99 under</label><input class="inp mono" id="p99" type="number" min="1" placeholder="ms"></div>
       <div><label for="fail">Failures under</label><input class="inp mono" id="fail" type="number" min="0" max="100" step="0.1" placeholder="%" value="1"></div>
     </div>
-    <p class="hint">Leave all three blank to run without a verdict.</p>
+    <p class="hint" id="critNote">Leave all three blank to run without a verdict.</p>
     <label class="check">
       <input type="checkbox" id="codes" checked>
       <span>Count status codes. Turn this off for long runs &mdash; it writes every request to disk.</span>
@@ -207,7 +231,7 @@ td.num{font-family:'IBM Plex Mono',monospace}
     <h2>Run history</h2>
     <span class="hint" id="histHint">Tick two runs to compare them.</span>
   </div>
-  <div id="histWrap"></div>
+  <div class="hwrap" id="histWrap"></div>
   <div id="compare"></div>
 </div>
 
@@ -216,6 +240,7 @@ td.num{font-family:'IBM Plex Mono',monospace}
 <script>
 const API = '/api/v1';
 const NO_BODY = ['GET', 'HEAD'];
+
 const EXECUTORS = [
   {id:'CONSTANT_VUS', name:'Fixed users', unit:'users',
    note:'Each user waits for a response before sending again, so a slow server gets less traffic. Good for a baseline, not for finding a limit.'},
@@ -224,38 +249,45 @@ const EXECUTORS = [
   {id:'ARRIVAL_RATE', name:'Fixed arrival rate', unit:'req/s',
    note:'Sends a set number of requests per second no matter how the server responds. This is the one that finds the breaking point.'},
 ];
+
 const PRESETS = [
   {id:'smoke', name:'Smoke', why:'Check the script works at all.', executor:'CONSTANT_VUS',
    stages:[{target:1,duration_seconds:30}], think:1, p95:1000, fail:1},
   {id:'load', name:'Load', why:'Hold expected peak traffic.', executor:'ARRIVAL_RATE',
    stages:[{target:50,duration_seconds:60},{target:50,duration_seconds:180}], think:1, p95:300, fail:1},
-  {id:'stress', name:'Stress', why:'Climb until something breaks.', executor:'ARRIVAL_RATE',
-   stages:[{target:50,duration_seconds:60},{target:200,duration_seconds:120},{target:500,duration_seconds:120}], think:0, p95:500, fail:5},
+  {id:'stress', name:'Stress', why:'Climb until something breaks. Failures here are the result, not a problem.',
+   executor:'ARRIVAL_RATE',
+   stages:[{target:25,duration_seconds:30},{target:50,duration_seconds:30},{target:100,duration_seconds:30},{target:200,duration_seconds:30}],
+   think:0, p95:null, p99:null, fail:null},
   {id:'spike', name:'Spike', why:'Jump hard, then recover.', executor:'ARRIVAL_RATE',
    stages:[{target:10,duration_seconds:30},{target:500,duration_seconds:30},{target:10,duration_seconds:60}], think:0, p95:800, fail:5},
   {id:'soak', name:'Soak', why:'Run long enough to expose leaks.', executor:'ARRIVAL_RATE',
    stages:[{target:50,duration_seconds:120},{target:50,duration_seconds:1800}], think:1, p95:300, fail:1, noCodes:true},
 ];
 
-let state = {
+const state = {
   tool:'K6', tools:[{tool:'K6',available:true}], executor:'CONSTANT_VUS',
   stages:[{target:10,duration_seconds:30}], headers:[{k:'',v:''}],
-  preset:null, running:false, result:null, selected:[],
+  preset:null, running:false, selected:[],
 };
+
 const $ = id => document.getElementById(id);
-const num = (n,d=0) => n==null ? '\u2014' : Number(n).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+const num = (n,d=0) => n==null ? '\u2014'
+  : Number(n).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const exec = () => EXECUTORS.find(e => e.id === state.executor);
 const totalSeconds = () => state.stages.reduce((s,x) => s + Number(x.duration_seconds||0), 0);
+
+/* ---------------- form rendering ---------------- */
 
 function chips(el, items, active, onPick){
   el.innerHTML = '';
   items.forEach(it => {
     const b = document.createElement('button');
     b.className = 'chip';
-    b.textContent = it.label;
+    b.textContent = it.disabled ? it.label + '  not installed' : it.label;
     b.setAttribute('aria-pressed', String(it.id === active));
-    if (it.disabled) { b.disabled = true; b.textContent = it.label + '  not installed'; }
+    b.disabled = !!it.disabled;
     b.onclick = () => onPick(it.id);
     el.appendChild(b);
   });
@@ -263,13 +295,16 @@ function chips(el, items, active, onPick){
 
 function renderTools(){
   chips($('tools'), state.tools.map(t => ({
-    id:t.tool, label:t.tool === 'K6' ? 'k6' : t.tool[0]+t.tool.slice(1).toLowerCase(), disabled:!t.available
+    id: t.tool,
+    label: t.tool === 'K6' ? 'k6' : t.tool[0] + t.tool.slice(1).toLowerCase(),
+    disabled: !t.available,
   })), state.tool, id => { state.tool = id; renderTools(); });
 }
 
 function renderExecutors(){
   chips($('executors'), EXECUTORS.map(e => ({id:e.id, label:e.name})), state.executor, id => {
-    state.preset = null; state.executor = id;
+    state.preset = null;
+    state.executor = id;
     if (id === 'CONSTANT_VUS' && state.stages.length > 1) state.stages = [state.stages[0]];
     renderAll();
   });
@@ -279,11 +314,16 @@ function renderExecutors(){
 function renderPresets(){
   chips($('presets'), PRESETS.map(p => ({id:p.id, label:p.name})), state.preset, id => {
     const p = PRESETS.find(x => x.id === id);
-    state.preset = id; state.executor = p.executor;
+    state.preset = id;
+    state.executor = p.executor;
     state.stages = p.stages.map(s => ({...s}));
-    $('think').value = p.think; $('p95').value = p.p95; $('p99').value = '';
-    $('fail').value = p.fail; $('codes').checked = !p.noCodes;
+    $('think').value = p.think;
+    $('p95').value = p.p95 == null ? '' : p.p95;
+    $('p99').value = p.p99 == null ? '' : p.p99;
+    $('fail').value = p.fail == null ? '' : p.fail;
+    $('codes').checked = !p.noCodes;
     renderAll();
+    validate();
   });
   $('presetWhy').textContent = state.preset
     ? PRESETS.find(p => p.id === state.preset).why
@@ -291,23 +331,29 @@ function renderPresets(){
 }
 
 function renderHeaders(){
-  const el = $('headers'); el.innerHTML = '';
+  const el = $('headers');
+  el.innerHTML = '';
   state.headers.forEach((h,i) => {
     const d = document.createElement('div');
-    d.className = 'row'; d.style.marginBottom = '7px';
+    d.className = 'row';
+    d.style.marginBottom = '7px';
     d.innerHTML = `<input class="inp mono" style="flex:0 0 38%" placeholder="Authorization" value="${esc(h.k)}">
       <input class="inp mono" style="flex:1" placeholder="Bearer &hellip;" value="${esc(h.v)}">
       <button class="xbtn" aria-label="Remove header">&times;</button>`;
     const [k,v,x] = d.children;
-    k.oninput = e => state.headers[i].k = e.target.value;
-    v.oninput = e => state.headers[i].v = e.target.value;
-    x.onclick = () => { state.headers = state.headers.length === 1 ? [{k:'',v:''}] : state.headers.filter((_,j) => j!==i); renderHeaders(); };
+    k.oninput = e => { state.headers[i].k = e.target.value; };
+    v.oninput = e => { state.headers[i].v = e.target.value; };
+    x.onclick = () => {
+      state.headers = state.headers.length === 1 ? [{k:'',v:''}] : state.headers.filter((_,j) => j !== i);
+      renderHeaders();
+    };
     el.appendChild(d);
   });
 }
 
 function renderStages(){
-  const el = $('stages'); el.innerHTML = '';
+  const el = $('stages');
+  el.innerHTML = '';
   state.stages.forEach((s,i) => {
     const d = document.createElement('div');
     d.className = 'stage';
@@ -316,11 +362,11 @@ function renderStages(){
       <span class="u">${exec().unit}</span>
       <input class="inp mono" type="number" min="1" max="1800" value="${s.duration_seconds}" aria-label="Stage ${i+1} duration">
       <span class="u">sec</span>
-      <button class="xbtn" aria-label="Remove stage"${state.stages.length===1?' disabled':''}>&times;</button>`;
+      <button class="xbtn" aria-label="Remove stage"${state.stages.length === 1 ? ' disabled' : ''}>&times;</button>`;
     const [, t, , dur, , x] = d.children;
-    t.oninput = e => { state.preset = null; state.stages[i].target = e.target.value; renderTotal(); };
-    dur.oninput = e => { state.preset = null; state.stages[i].duration_seconds = e.target.value; renderTotal(); };
-    x.onclick = () => { state.preset = null; state.stages = state.stages.filter((_,j) => j!==i); renderAll(); };
+    t.oninput = e => { state.preset = null; state.stages[i].target = e.target.value; renderTotal(); validate(); };
+    dur.oninput = e => { state.preset = null; state.stages[i].duration_seconds = e.target.value; renderTotal(); validate(); };
+    x.onclick = () => { state.preset = null; state.stages = state.stages.filter((_,j) => j !== i); renderAll(); validate(); };
     el.appendChild(d);
   });
   const fixed = state.executor === 'CONSTANT_VUS';
@@ -332,7 +378,8 @@ function renderStages(){
 
 function renderTotal(){
   const t = totalSeconds();
-  $('total').textContent = `${state.stages.length} ${state.stages.length===1?'stage':'stages'} \u00b7 ${t}s total`;
+  const label = state.stages.length === 1 ? 'stage' : 'stages';
+  $('total').textContent = `${state.stages.length} ${label} \u00b7 ${t}s total`;
 }
 
 function renderThink(){
@@ -342,47 +389,134 @@ function renderThink(){
     : 'Pausing between requests models people reading the page. Throughput will be much lower than with no pause \u2014 that is expected.';
 }
 
-function renderAll(){ renderTools(); renderExecutors(); renderPresets(); renderStages(); renderThink(); }
+function renderAll(){
+  renderTools(); renderExecutors(); renderPresets(); renderStages(); renderThink();
+}
+
+/* ---------------- validation ---------------- */
+
+function checkBody(raw){
+  if (!raw) return null;
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch { return "This isn't valid JSON yet."; }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
+    return 'The body has to be a JSON object, not an array or a single value.';
+  return null;
+}
+
+function checkRand(raw, bodyRaw, bodyIsValid){
+  if (!raw) return null;
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch { return "This isn't valid JSON yet."; }
+
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
+    return 'Use {"path": [...], "values": [...]}.';
+  if (!Array.isArray(parsed.path) || parsed.path.length === 0)
+    return '"path" has to be a non-empty array, e.g. ["items", 0, "productOptionId"].';
+  if (!parsed.path.every(k => typeof k === 'string' || Number.isInteger(k)))
+    return '"path" can only contain field names and array indexes.';
+  if (!Array.isArray(parsed.values) || parsed.values.length === 0)
+    return '"values" has to be a non-empty array of the values to pick from.';
+
+  if (!bodyRaw) return 'There is no body to vary. Fill in the body first.';
+
+  // 본문이 유효할 때만 경로를 따라가 본다. 깨진 JSON 위에서 판단하면 오해를 부른다.
+  if (bodyIsValid) {
+    let node = JSON.parse(bodyRaw);
+    for (const key of parsed.path) {
+      if (node === null || typeof node !== 'object') { node = undefined; break; }
+      node = node[key];
+      if (node === undefined) break;
+    }
+    if (node === undefined)
+      return `The body has no field at ${JSON.stringify(parsed.path)}.`;
+  }
+
+  return null;
+}
 
 function validate(){
   const url = $('url').value.trim();
   const method = $('method').value;
-  let urlErr = null, bodyErr = null;
-  if (url && !/^https?:\/\//i.test(url)) urlErr = 'Start the URL with http:// or https://';
-  const raw = $('body').value.trim();
-  if (raw && !NO_BODY.includes(method)) {
-    try {
-      const p = JSON.parse(raw);
-      if (p === null || typeof p !== 'object' || Array.isArray(p))
-        bodyErr = 'The body has to be a JSON object, not an array or a single value.';
-    } catch { bodyErr = "This isn't valid JSON yet."; }
-  }
-  $('urlErr').hidden = !urlErr; $('urlErr').textContent = urlErr || '';
-  $('bodyErr').hidden = !bodyErr; $('bodyErr').textContent = bodyErr || '';
   const bodyOff = NO_BODY.includes(method);
+
+  const bodyRaw = bodyOff ? '' : $('body').value.trim();
+  const randRaw = bodyOff ? '' : $('rand').value.trim();
+
+  const urlErr = url && !/^https?:\/\//i.test(url)
+    ? 'Start the URL with http:// or https://'
+    : null;
+  const bodyErr = checkBody(bodyRaw);
+  const randErr = checkRand(randRaw, bodyRaw, bodyErr === null);
+  const totalErr = totalSeconds() > 3600
+    ? `Stages add up to ${totalSeconds()}s. The server caps a run at 3600s.`
+    : null;
+
   $('body').disabled = bodyOff;
-  $('body').placeholder = bodyOff ? `${method} requests are sent without a body` : '{\n  "sku": "A-1024"\n}';
-  const tooLong = totalSeconds() > 3600;
-  $('runBtn').disabled = !url || urlErr || bodyErr || tooLong || state.running;
-  return {url, method, bodyOff};
+  $('body').placeholder = bodyOff
+    ? `${method} requests are sent without a body`
+    : '{\n  "sku": "A-1024"\n}';
+
+  $('rand').disabled = bodyOff;
+  $('randNote').hidden = bodyOff;
+
+  show('urlErr', urlErr);
+  show('bodyErr', bodyErr);
+  show('randErr', randErr);
+  show('stageHint', totalErr, true);
+
+  const noCriteria = !$('p95').value.trim() && !$('p99').value.trim() && !$('fail').value.trim();
+  $('critNote').textContent = noCriteria
+    ? 'No criteria set, so this run gets no verdict. That is the right choice when you are hunting for a limit.'
+    : 'Leave all three blank to run without a verdict.';
+
+  $('runBtn').disabled = !url || !!urlErr || !!bodyErr || !!randErr || !!totalErr || state.running;
+
+  return {url, method, bodyOff, bodyRaw, randRaw};
 }
 
+function show(id, message, isHint){
+  const el = $(id);
+  if (!el) return;
+  el.hidden = !message;
+  if (message) {
+    el.textContent = message;
+    if (isHint) el.classList.add('bad');
+  } else if (isHint) {
+    el.classList.remove('bad');
+  }
+}
+
+/* ---------------- running ---------------- */
+
 function payload(){
-  const {url, method, bodyOff} = validate();
+  const {url, method, bodyOff, bodyRaw, randRaw} = validate();
+
   const headers = {};
   state.headers.forEach(h => { if (h.k.trim()) headers[h.k.trim()] = h.v; });
-  const th = {};
-  if ($('p95').value.trim()) th.p95_ms = Number($('p95').value);
-  if ($('p99').value.trim()) th.p99_ms = Number($('p99').value);
-  if ($('fail').value.trim()) th.max_failure_rate = Number($('fail').value) / 100;
-  const raw = $('body').value.trim();
+
+  const thresholds = {};
+  if ($('p95').value.trim()) thresholds.p95_ms = Number($('p95').value);
+  if ($('p99').value.trim()) thresholds.p99_ms = Number($('p99').value);
+  if ($('fail').value.trim()) thresholds.max_failure_rate = Number($('fail').value) / 100;
+
   return {
-    tool: state.tool, method, url, headers,
-    body: bodyOff || !raw ? null : JSON.parse(raw),
+    tool: state.tool,
+    method,
+    url,
+    headers,
+    body: bodyOff || !bodyRaw ? null : JSON.parse(bodyRaw),
+    body_randomization: bodyOff || !randRaw ? null : JSON.parse(randRaw),
     executor: state.executor,
-    stages: state.stages.map(s => ({target:Number(s.target), duration_seconds:Number(s.duration_seconds)})),
+    stages: state.stages.map(s => ({
+      target: Number(s.target),
+      duration_seconds: Number(s.duration_seconds),
+    })),
     think_time_seconds: Number($('think').value || 0),
-    thresholds: th,
+    thresholds,
     collect_status_codes: $('codes').checked,
   };
 }
@@ -393,26 +527,39 @@ function setStatus(kind, text){
 }
 
 async function run(){
-  state.running = true; validate();
+  const body = payload();
   const total = totalSeconds();
-  const t0 = Date.now();
-  const tick = setInterval(() => setStatus('run', `${exec().name.toLowerCase()} \u00b7 ${Math.round((Date.now()-t0)/1000)} of ${total}s`), 200);
+
+  state.running = true;
+  validate();
   $('runBtn').textContent = 'Running\u2026';
   $('readout').innerHTML = '<p class="empty">Generating load. Results land here when every stage has finished.</p>';
+
+  const t0 = Date.now();
+  const tick = setInterval(() => setStatus('run',
+    `${exec().name.toLowerCase()} \u00b7 ${Math.round((Date.now() - t0) / 1000)} of ${total}s`), 200);
+
   try {
     const res = await fetch(`${API}/tests`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload())
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
     });
     const text = await res.text();
+
     if (!res.ok) {
-      let d = text;
-      try { const j = JSON.parse(text); d = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail); } catch {}
-      throw new Error(`The server returned ${res.status}. ${d}`);
+      let detail = text;
+      try {
+        const j = JSON.parse(text);
+        detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail);
+      } catch { /* 본문이 JSON 이 아니면 원문을 그대로 보여준다 */ }
+      throw new Error(`The server returned ${res.status}. ${detail}`);
     }
-    state.result = JSON.parse(text);
-    render(state.result);
-    setStatus(state.result.passed === false ? 'bad' : 'ok',
-      `${state.result.tool} \u00b7 ${state.result.executor.replace(/_/g,' ').toLowerCase()} \u00b7 ${state.result.durationSeconds}s`);
+
+    const result = JSON.parse(text);
+    render(result);
+    setStatus(result.passed === false ? 'bad' : 'ok',
+      `${result.tool} \u00b7 ${result.executor.replace(/_/g,' ').toLowerCase()} \u00b7 ${result.durationSeconds}s`);
     loadHistory();
   } catch (e) {
     const msg = e instanceof TypeError
@@ -422,69 +569,145 @@ async function run(){
     setStatus('bad', "Test didn't run");
   } finally {
     clearInterval(tick);
-    state.running = false; $('runBtn').textContent = 'Run test'; validate();
+    state.running = false;
+    $('runBtn').textContent = 'Run test';
+    validate();
   }
 }
 
-function render(r, editable = true){
-  const marks = [['avg',r.avgResponseTimeMs],['p90',r.p90ResponseTimeMs],['p95',r.p95ResponseTimeMs],
-                 ['p99',r.p99ResponseTimeMs],['max',r.maxResponseTimeMs]].filter(m => m[1] != null);
-  const max = r.maxResponseTimeMs || 1;
+/* ---------------- readout ---------------- */
+
+function verdictBlock(r){
   const broke = (r.thresholds || []).filter(t => !t.passed).length;
-  const isRate = n => /failed|rate/.test(n);
-  const fmt = (t,v) => v == null ? '\u2014' : isRate(t.name) ? (v*100).toFixed(2)+'%' : num(v,1)+' ms';
+  const cls = r.passed === true ? 'pass' : r.passed === false ? 'fail' : 'none';
+  const word = r.passed === true ? 'Passed' : r.passed === false ? 'Failed' : 'No verdict';
+  const why = r.passed === true ? 'Everything you asked for held.'
+    : r.passed === false ? `${broke} of ${r.thresholds.length} criteria missed.`
+    : "No pass criteria were set, so there is nothing to judge against.";
+  return `<div class="verdict"><span class="big ${cls}">${word}</span>
+    <span class="why">${why}</span></div>`;
+}
 
-  let h = `<div class="verdict">
-    <span class="big ${r.passed===true?'pass':r.passed===false?'fail':'none'}">${
-      r.passed===true?'Passed':r.passed===false?'Failed':'No verdict'}</span>
-    <span class="why">${r.passed===true?'Everything you asked for held.'
-      :r.passed===false?`${broke} of ${r.thresholds.length} criteria missed.`
-      :"You didn't set pass criteria, so there's nothing to judge against."}</span></div>`;
+function thresholdBlock(r){
+  const isRate = name => /failed|rate/.test(name);
+  const fmt = (t, v) => v == null ? '\u2014'
+    : isRate(t.name) ? (v * 100).toFixed(2) + '%' : num(v, 1) + ' ms';
 
-  (r.thresholds || []).forEach(t => {
+  return (r.thresholds || []).map(t => {
     const ratio = (t.actual != null && t.limit) ? t.actual / t.limit : null;
-    h += `<div class="th"><div class="top">
-      <span style="color:var(--gsoft)">${esc(t.name.replace('http_req_duration: ','').replace('http_req_failed: ','failures '))}</span>
-      <span style="color:${t.passed?'var(--trace)':'var(--fault)'}">${fmt(t,t.actual)}
-        <span style="color:var(--gsoft)">/ ${fmt(t,t.limit)}</span></span></div>
-      <div class="track">${ratio!=null?`<span class="fill ${t.passed?'':'over'}" style="width:${Math.min(100,ratio*66)}%"></span>`:''}
-      <span class="limit"></span></div></div>`;
-  });
+    const label = t.name.replace('http_req_duration: ', '').replace('http_req_failed: ', 'failures ');
+    const fill = ratio == null ? ''
+      : `<span class="fill ${t.passed ? '' : 'over'}" style="width:${Math.min(100, ratio * 66)}%"></span>`;
+    return `<div class="th"><div class="top">
+      <span style="color:var(--gsoft)">${esc(label)}</span>
+      <span style="color:${t.passed ? 'var(--trace)' : 'var(--fault)'}">${fmt(t, t.actual)}
+        <span style="color:var(--gsoft)">/ ${fmt(t, t.limit)}</span></span></div>
+      <div class="track">${fill}<span class="limit"></span></div></div>`;
+  }).join('');
+}
 
-  if (marks.length) {
-    h += `<div class="sect" style="margin-top:28px">Response time spread \u00b7 0 \u2013 ${num(max)} ms</div><div class="scale">`;
-    marks.forEach((m,i) => {
-      const left = Math.min(97, Math.max(3, (m[1]/max)*100));
-      const hot = m[0] === 'max';
-      h += `<div class="tick" style="left:${left}%">
-        <div class="cap"${hot?' style="color:var(--signal)"':''}>${num(m[1],1)}</div>
-        <div class="stem" style="height:${24+i*10}px${hot?';background:var(--signal)':''}"></div>
-        <div class="nm">${m[0]}</div></div>`;
-    });
-    h += '</div>';
+// 계단식 실행에서는 전체 p95 가 아니라 어느 구간에서 꺾였는지가 결과다.
+function stepBlock(r){
+  const steps = r.steps || [];
+  if (steps.length < 2) return '';
+
+  // 꺾임의 근거는 둘이다. 목표 도착률을 못 채웠거나(포화), p95 가 몇 배로
+  // 뛰면서 실제로 느려졌거나. 배수만 보면 18ms->58ms 도 걸리는데 그건 아직
+  // 멀쩡한 구간이므로 절대값 조건을 함께 요구한다.
+  const SLOW_MS = 200;
+  let knee = -1;
+  for (let i = 1; i < steps.length; i++) {
+    const prev = steps[i - 1].p95ResponseTimeMs;
+    const here = steps[i].p95ResponseTimeMs;
+    const saturated = steps[i].actualRps < steps[i].targetRps * 0.95;
+    const spiked = prev && here && here > prev * 3 && here > SLOW_MS;
+    if (saturated || spiked) { knee = i; break; }
   }
 
+  const rows = steps.map((s, i) => {
+    const short = s.actualRps < s.targetRps * 0.95;
+    return `<tr class="${i === knee ? 'knee' : ''}">
+      <td>${num(s.targetRps)} req/s</td>
+      <td${short ? ' style="color:var(--fault)"' : ''}>${num(s.actualRps, 1)}</td>
+      <td>${num(s.p95ResponseTimeMs, 1)}</td>
+      <td>${num(s.p99ResponseTimeMs, 1)}</td>
+      <td>${num((s.failureRate || 0) * 100, 2)}%</td></tr>`;
+  }).join('');
+
+  return `<div class="sect">By stage</div>
+    <table class="steps"><thead><tr>
+      <th>Target</th><th>Actual</th><th>p95 ms</th><th>p99 ms</th><th>Failed</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function scaleBlock(r){
+  const marks = [
+    ['avg', r.avgResponseTimeMs], ['p90', r.p90ResponseTimeMs], ['p95', r.p95ResponseTimeMs],
+    ['p99', r.p99ResponseTimeMs], ['max', r.maxResponseTimeMs],
+  ].filter(m => m[1] != null);
+  if (!marks.length) return '';
+
+  const max = r.maxResponseTimeMs || 1;
+  let lastLeft = -100;
+
+  const ticks = marks.map((m, i) => {
+    const left = Math.min(97, Math.max(3, (m[1] / max) * 100));
+    // 값이 같거나 아주 가까우면 라벨이 겹쳐 읽을 수 없게 된다. 뒤쪽만 남긴다.
+    const crowded = left - lastLeft < 6;
+    lastLeft = Math.max(lastLeft, left);
+    if (crowded) return '';
+    const hot = m[0] === 'max';
+    return `<div class="tick" style="left:${left}%">
+      <div class="cap"${hot ? ' style="color:var(--signal)"' : ''}>${num(m[1], 1)}</div>
+      <div class="stem" style="height:${24 + i * 10}px${hot ? ';background:var(--signal)' : ''}"></div>
+      <div class="nm">${m[0]}</div></div>`;
+  }).join('');
+
+  return `<div class="sect">Response time spread \u00b7 0 \u2013 ${num(max)} ms</div>
+    <div class="scale">${ticks}</div>`;
+}
+
+function statsBlock(r){
   const failPct = (r.failureRate || 0) * 100;
-  h += `<div class="stats">
-    <div class="stat"><div class="n">${num(r.requestsPerSecond,1)}</div><div class="l">requests / sec</div></div>
+  return `<div class="stats">
+    <div class="stat"><div class="n">${num(r.requestsPerSecond, 1)}</div><div class="l">requests / sec</div></div>
     <div class="stat"><div class="n">${num(r.totalRequests)}</div><div class="l">requests sent</div></div>
-    <div class="stat"><div class="n"${failPct>0?' style="color:var(--fault)"':''}>${num(failPct,2)}%</div>
+    <div class="stat"><div class="n"${failPct > 0 ? ' style="color:var(--fault)"' : ''}>${num(failPct, 2)}%</div>
       <div class="l">${num(r.failedRequests)} failed</div></div></div>`;
+}
 
-  const codes = Object.entries(r.statusCodes || {}).sort((a,b) => b[1]-a[1]);
-  if (codes.length) {
-    const top = codes[0][1];
-    h += '<div class="sect">Status codes</div>';
-    codes.forEach(([c,n]) => {
-      h += `<div class="crow"><span class="c">${esc(c)}</span>
-        <span class="bar${Number(c)>=400||c==='0'?' bad':''}" style="width:${(n/top)*60}%"></span>
-        <span class="n">${num(n)}</span></div>`;
-    });
-  }
+// 보내려던 요청을 못 보냈다면 그 숫자는 서버 성능이 아닐 수 있다. 조용히 넘기면 안 된다.
+function droppedBlock(r){
+  const dropped = r.droppedIterations || 0;
+  if (!dropped) return '';
+  const total = (r.totalRequests || 0) + dropped;
+  const pct = total ? (dropped / total) * 100 : 0;
+  return `<div class="warn"><strong>${num(dropped)} requests never went out</strong>
+    (${num(pct, 1)}% of what was asked for). Either the server could not keep up, or the
+    load generator ran out of headroom. Check CPU on this machine before trusting the numbers.</div>`;
+}
+
+function codesBlock(r){
+  const codes = Object.entries(r.statusCodes || {}).sort((a,b) => b[1] - a[1]);
+  if (!codes.length) return '';
+  const top = codes[0][1];
+  const rows = codes.map(([c, n]) => {
+    const bad = Number(c) >= 400 || c === '0';
+    const note = c === '0' ? ' <span class="n">connection failed</span>' : '';
+    return `<div class="crow"><span class="c">${esc(c)}</span>
+      <span class="bar${bad ? ' bad' : ''}" style="width:${(n / top) * 60}%"></span>
+      <span class="n">${num(n)}</span>${note}</div>`;
+  }).join('');
+  return `<div class="sect">Status codes</div>${rows}`;
+}
+
+function render(r, editable = true){
+  let h = verdictBlock(r) + thresholdBlock(r) + droppedBlock(r) + stepBlock(r);
+  h += scaleBlock(r) + statsBlock(r) + codesBlock(r);
 
   if (r.runId && editable) {
     h += `<div class="notebox"><div class="sect">What did you change before this run?</div>
-      <input class="noteinp" id="note" placeholder="Added a Redis cache on product lookup">
+      <input class="noteinp" id="note" placeholder="Added an index on Order.userId">
       <p class="hint" style="color:var(--gsoft)">Saved as you type. This is what makes the history readable later.</p></div>`;
   }
 
@@ -495,10 +718,11 @@ function render(r, editable = true){
 
   $('readout').innerHTML = h;
 
-  const tog = $('scriptToggle');
-  if (tog) tog.onclick = () => {
-    const box = $('scriptBox'); box.hidden = !box.hidden;
-    tog.textContent = box.hidden ? 'Show the k6 script this ran' : 'Hide the k6 script';
+  const toggle = $('scriptToggle');
+  if (toggle) toggle.onclick = () => {
+    const box = $('scriptBox');
+    box.hidden = !box.hidden;
+    toggle.textContent = box.hidden ? 'Show the k6 script this ran' : 'Hide the k6 script';
   };
 
   const note = $('note');
@@ -507,43 +731,61 @@ function render(r, editable = true){
     note.oninput = () => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
-        await fetch(`${API}/runs/${r.runId}`, {
-          method:'PATCH', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({note: note.value})
-        });
-        loadHistory();
+        try {
+          await fetch(`${API}/runs/${r.runId}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({note: note.value}),
+          });
+          loadHistory();
+        } catch { /* 메모 저장 실패로 결과 화면을 잃을 이유는 없다 */ }
       }, 600);
     };
   }
 }
 
+/* ---------------- history ---------------- */
+
 async function loadHistory(){
   let runs = [];
-  try { runs = await (await fetch(`${API}/runs`)).json(); } catch { return; }
+  try { runs = await (await fetch(`${API}/runs`)).json(); }
+  catch { return; }
 
   if (!runs.length) {
     $('histWrap').innerHTML = '<p class="hint">No runs yet. The first one you complete is saved here automatically.</p>';
-    $('compare').innerHTML = ''; return;
+    $('compare').innerHTML = '';
+    $('histHint').textContent = '';
+    return;
   }
 
-  let h = `<table><thead><tr><th style="width:28px"></th><th>When</th><th>Target</th>
-    <th>What changed</th><th>Verdict</th><th>req/s</th><th>p95</th><th>Failures</th><th></th></tr></thead><tbody>`;
-  runs.forEach(r => {
+  $('histHint').textContent = state.selected.length === 1
+    ? 'Pick one more to compare.'
+    : 'Tick two runs to compare them.';
+
+  const rows = runs.map(r => {
     const when = new Date(r.started_at).toLocaleString();
     const on = state.selected.includes(r.id);
-    h += `<tr class="${on?'sel':''}" data-id="${r.id}">
-      <td><input type="checkbox" ${on?'checked':''} data-pick="${r.id}"></td>
-      <td class="num" style="white-space:nowrap">${esc(when)}</td>
+    const cls = r.passed === true ? 'p' : r.passed === false ? 'f' : 'n';
+    const word = r.passed === true ? 'Passed' : r.passed === false ? 'Failed' : 'None';
+    return `<tr class="${on ? 'sel' : ''}">
+      <td><input type="checkbox" ${on ? 'checked' : ''} data-pick="${r.id}" aria-label="Compare this run"></td>
+      <td class="num">${esc(when)}</td>
       <td><span class="tag n">${esc(r.method)}</span> ${esc(r.url)}</td>
       <td>${r.note ? esc(r.note) : '<span style="color:var(--soft)">\u2014</span>'}</td>
-      <td><span class="tag ${r.passed===true?'p':r.passed===false?'f':'n'}">${
-        r.passed===true?'Passed':r.passed===false?'Failed':'None'}</span></td>
-      <td class="num">${num(r.requestsPerSecond,1)}</td>
-      <td class="num">${r.p95ResponseTimeMs==null?'\u2014':num(r.p95ResponseTimeMs,1)}</td>
-      <td class="num">${num((r.failureRate||0)*100,2)}%</td>
-      <td><button class="linkbtn" data-open="${r.id}" style="color:var(--ink)">Open</button></td></tr>`;
-  });
-  $('histWrap').innerHTML = h + '</tbody></table>';
+      <td><span class="tag ${cls}">${word}</span></td>
+      <td class="num">${num(r.requestsPerSecond, 1)}</td>
+      <td class="num">${r.p95ResponseTimeMs == null ? '\u2014' : num(r.p95ResponseTimeMs, 1)}</td>
+      <td class="num">${num((r.failureRate || 0) * 100, 2)}%</td>
+      <td style="white-space:nowrap">
+        <button class="linkbtn" data-open="${r.id}" style="color:var(--ink)">Open</button>
+        <button class="linkbtn" data-del="${r.id}" style="color:var(--soft);margin-left:10px">Delete</button>
+      </td></tr>`;
+  }).join('');
+
+  $('histWrap').innerHTML = `<table><thead><tr>
+    <th style="width:28px"></th><th>When</th><th>Target</th><th>What changed</th>
+    <th>Verdict</th><th>req/s</th><th>p95</th><th>Failed</th><th></th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
 
   $('histWrap').querySelectorAll('[data-pick]').forEach(cb => {
     cb.onchange = () => {
@@ -554,12 +796,34 @@ async function loadHistory(){
       loadHistory();
     };
   });
+
   $('histWrap').querySelectorAll('[data-open]').forEach(b => {
     b.onclick = async () => {
-      const rec = await (await fetch(`${API}/runs/${b.dataset.open}`)).json();
-      render(rec.response, false);
-      setStatus('', `${new Date(rec.started_at).toLocaleString()} \u00b7 ${rec.note || 'no note'}`);
-      $('case').scrollIntoView({behavior:'smooth', block:'start'});
+      try {
+        const rec = await (await fetch(`${API}/runs/${b.dataset.open}`)).json();
+        render(rec.response, false);
+        setStatus('', `${new Date(rec.started_at).toLocaleString()} \u00b7 ${rec.note || 'no note'}`);
+        $('case').scrollIntoView({behavior:'smooth', block:'start'});
+      } catch {
+        $('readout').innerHTML = '<div class="err">Could not load that run.</div>';
+      }
+    };
+  });
+
+  $('histWrap').querySelectorAll('[data-del]').forEach(b => {
+    b.onclick = async () => {
+      // 측정 이력은 다시 만들 수 없다. 그때의 코드와 DB 상태에서 나온 값이므로
+      // 지우면 복구가 안 된다. 파일까지 삭제되니 한 번 묻는다.
+      if (!confirm('Delete this run? The conditions and results go with it, and the file is removed.')) return;
+      try {
+        const res = await fetch(`${API}/runs/${b.dataset.del}`, {method: 'DELETE'});
+        if (!res.ok) throw new Error();
+        // 비교 대상으로 찍어둔 것을 지웠다면 선택에서도 빼야 유령 항목이 남지 않는다.
+        state.selected = state.selected.filter(x => x !== b.dataset.del);
+        loadHistory();
+      } catch {
+        $('histHint').textContent = 'Could not delete that run.';
+      }
     };
   });
 
@@ -568,35 +832,53 @@ async function loadHistory(){
 
 function renderCompare(runs){
   if (state.selected.length !== 2) { $('compare').innerHTML = ''; return; }
-  const [b, a] = state.selected.map(id => runs.find(r => r.id === id))
-    .sort((x,y) => new Date(x.started_at) - new Date(y.started_at));
-  if (!a || !b) { $('compare').innerHTML = ''; return; }
 
-  const rows = [
-    ['Throughput', 'requestsPerSecond', 'req/s', 1, true],
-    ['p95', 'p95ResponseTimeMs', 'ms', 1, false],
-    ['Failure rate', 'failureRate', '%', 2, false],
+  const picked = state.selected
+    .map(id => runs.find(r => r.id === id))
+    .filter(Boolean)
+    .sort((x,y) => new Date(x.started_at) - new Date(y.started_at));
+  if (picked.length !== 2) { $('compare').innerHTML = ''; return; }
+
+  const [before, after] = picked;
+
+  const METRICS = [
+    {label:'Throughput', key:'requestsPerSecond', unit:'req/s', dp:1, higherBetter:true, scale:1},
+    {label:'p95', key:'p95ResponseTimeMs', unit:'ms', dp:1, higherBetter:false, scale:1},
+    {label:'Failure rate', key:'failureRate', unit:'%', dp:2, higherBetter:false, scale:100},
   ];
 
-  let h = `<div class="cmp"><h3>${esc(b.note || 'Earlier run')} \u2192 ${esc(a.note || 'Later run')}</h3>
-    <table><thead><tr><th>Metric</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody>`;
-  rows.forEach(([label, key, unit, dp, higherBetter]) => {
-    const scale = key === 'failureRate' ? 100 : 1;
-    const before = b[key] == null ? null : b[key] * scale;
-    const after = a[key] == null ? null : a[key] * scale;
-    let change = '\u2014', worse = false;
-    if (before != null && after != null && before !== 0) {
-      const pct = ((after - before) / before) * 100;
-      const better = higherBetter ? pct > 0 : pct < 0;
+  const rows = METRICS.map(m => {
+    const b = before[m.key] == null ? null : before[m.key] * m.scale;
+    const a = after[m.key] == null ? null : after[m.key] * m.scale;
+
+    let change = '\u2014';
+    let worse = false;
+    if (b != null && a != null && b !== 0) {
+      const pct = ((a - b) / b) * 100;
+      const better = m.higherBetter ? pct > 0 : pct < 0;
       worse = Math.abs(pct) > 0.5 && !better;
       change = `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`;
+      // 몇 배씩 달라지면 퍼센트보다 배수가 읽기 쉽다.
+      const factor = m.higherBetter ? a / b : b / a;
+      if (factor >= 3) change += ` (${factor.toFixed(1)}\u00d7 better)`;
+      else if (factor > 0 && factor <= 1/3) change += ` (${(1/factor).toFixed(1)}\u00d7 worse)`;
     }
-    h += `<tr><td>${label}</td><td class="num">${before==null?'\u2014':num(before,dp)} ${unit}</td>
-      <td class="num">${after==null?'\u2014':num(after,dp)} ${unit}</td>
-      <td class="num delta${worse?' worse':''}">${change}</td></tr>`;
-  });
-  $('compare').innerHTML = h + '</tbody></table></div>';
+
+    return `<tr><td>${m.label}</td>
+      <td class="num">${b == null ? '\u2014' : num(b, m.dp)} ${m.unit}</td>
+      <td class="num">${a == null ? '\u2014' : num(a, m.dp)} ${m.unit}</td>
+      <td class="num delta${worse ? ' worse' : ''}">${change}</td></tr>`;
+  }).join('');
+
+  $('compare').innerHTML = `<div class="cmp">
+    <h3>${esc(before.note || 'Earlier run')} \u2192 ${esc(after.note || 'Later run')}</h3>
+    <table><thead><tr><th>Metric</th><th>Before</th><th>After</th><th>Change</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <p class="hint">Only comparable if both runs used the same stages, think time, and target.</p>
+  </div>`;
 }
+
+/* ---------------- wiring ---------------- */
 
 async function init(){
   try {
@@ -606,16 +888,26 @@ async function init(){
       if (!list.some(t => t.tool === state.tool && t.available))
         state.tool = (list.find(t => t.available) || {}).tool || state.tool;
     }
-  } catch {}
-  renderAll(); renderHeaders(); validate(); loadHistory();
+  } catch { /* /tools 가 없어도 k6 기본값으로 동작한다 */ }
+
+  renderAll();
+  renderHeaders();
+  validate();
+  loadHistory();
 }
 
-['url','method','body','p95','p99','fail'].forEach(id => $(id).addEventListener('input', validate));
+['url','body','rand','p95','p99','fail'].forEach(id => $(id).addEventListener('input', validate));
 $('method').addEventListener('change', validate);
 $('think').addEventListener('input', renderThink);
 $('addHeader').onclick = () => { state.headers.push({k:'',v:''}); renderHeaders(); };
-$('addStage').onclick = () => { state.preset = null; state.stages.push({target:100,duration_seconds:60}); renderAll(); };
+$('addStage').onclick = () => {
+  state.preset = null;
+  state.stages.push({target:100, duration_seconds:60});
+  renderAll();
+  validate();
+};
 $('runBtn').onclick = run;
+
 init();
 </script>
 </body>
